@@ -1,33 +1,38 @@
 import pandas as pd
 from textblob import TextBlob
+from googletrans import Translator
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 
-# Sample DataFrame with complaints
-df = pd.read_excel("Dataset_Datathon_IscteAvanade_Marco2025 1.xlsx", sheet_name="Clientes")
+# Cache para evitar traduções repetidas
+@lru_cache(maxsize=1000)
+def translate_text(text):
+    translator = Translator()
+    return translator.translate(text, dest='en').text
 
-# Step 1: Strip leading/trailing spaces (if needed) and split by ';'
-df['Detalhes_Reclamações'] = df['Detalhes_Reclamações'].str.strip().str.split(';')
-
-# Step 2: Explode the lists into separate rows
-df_separated = df.explode('Detalhes_Reclamações', ignore_index=True)
-
-# Step 3: Clean the exploded DataFrame to remove NaN or empty string values (if any)
-df_separated = df_separated[df_separated['Detalhes_Reclamações'].notnull() & (df_separated['Detalhes_Reclamações'] != '')]
-
-# Function to analyze sentiment
+# Função para analisar o sentimento de cada texto
 def analyze_sentiment(text):
-    if pd.isnull(text) or not isinstance(text, str):  # Check if text is NaN or not a string
-        return 0  # Neutral sentiment for missing/invalid text
-    print(f"Analyzing: {text}")  # Debug: Print the text being analyzed
-    # Create a TextBlob object
-    blob = TextBlob(text)
-    return blob.sentiment.polarity
+    if not isinstance(text, str):
+        return 0  # Retorna 0 para valores não textuais
+    texts = text.split(';')  # Dividir o texto por ';'
+    sentiments = []
+    for t in texts:
+        try:
+            translated_text = translate_text(t.strip())
+            blob = TextBlob(translated_text)
+            sentiments.append(blob.sentiment.polarity)  # Polaridade do sentimento
+        except Exception:
+            sentiments.append(0)  # Em caso de erro, atribuir polaridade neutra
+    return sum(sentiments) / len(sentiments) if sentiments else 0  # Média dos sentimentos
 
-# Apply sentiment analysis to each complaint in the DataFrame
-df_separated['Sentiment'] = df_separated['Detalhes_Reclamações'].apply(analyze_sentiment)
-print("\n")
-# Display the DataFrame with the sentiment column
-print(df_separated[['Detalhes_Reclamações', 'Sentiment']])
+# Carregar o dataset
+df_clientes = pd.read_excel("analise.xlsx", sheet_name=1)
 
-# Optionally, you can calculate the average sentiment of all complaints
-average_sentiment = df_separated['Sentiment'].mean()
-print("\nAverage Sentiment of Complaints: {:.2f}".format(average_sentiment))
+# Aplicar a análise de sentimento em paralelo
+with ThreadPoolExecutor() as executor:
+    df_clientes['sentiment'] = list(executor.map(analyze_sentiment, df_clientes['Detalhes_Reclamações']))
+
+# Salvar os resultados em um novo arquivo Excel
+df_clientes.to_excel('sentiment_analysis_results.xlsx', index=False)
+
+print("Análise de sentimento concluída e salva em 'sentiment_analysis_results.xlsx'.")
