@@ -2,13 +2,20 @@ import pandas as pd
 from textblob import TextBlob
 from googletrans import Translator
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 
-# Cache para evitar traduções repetidas
-@lru_cache(maxsize=1000)
+# Cache manual para evitar traduções repetidas
+translation_cache = {}
+
 def translate_text(text):
+    if text in translation_cache:
+        return translation_cache[text]
     translator = Translator()
-    return translator.translate(text, dest='en').text
+    try:
+        translated = translator.translate(text, dest='en').text
+        translation_cache[text] = translated
+        return translated
+    except Exception:
+        return text  # Retorna o texto original em caso de falha
 
 # Função para analisar o sentimento de cada texto
 def analyze_sentiment(text):
@@ -20,19 +27,21 @@ def analyze_sentiment(text):
         try:
             translated_text = translate_text(t.strip())
             blob = TextBlob(translated_text)
-            sentiments.append(blob.sentiment.polarity)  # Polaridade do sentimento
+            # Normalizar a polaridade para a escala de 0 a 1
+            normalized_sentiment = blob.sentiment.polarity
+            sentiments.append(normalized_sentiment)
         except Exception:
-            sentiments.append(0)  # Em caso de erro, atribuir polaridade neutra
-    return sum(sentiments) / len(sentiments) if sentiments else 0  # Média dos sentimentos
+            sentiments.append(0.5)  # Em caso de erro, atribuir polaridade neutra
+    return sum(sentiments) / len(sentiments) if sentiments else 0.5  # Média dos sentimentos
 
 # Carregar o dataset
-df_clientes = pd.read_excel("analise.xlsx", sheet_name=1)
+df_clientes = pd.read_csv("clientes.csv")
 
 # Aplicar a análise de sentimento em paralelo
 with ThreadPoolExecutor() as executor:
-    df_clientes['sentiment'] = list(executor.map(analyze_sentiment, df_clientes['Detalhes_Reclamações']))
+    df_clientes['sentimento'] = list(executor.map(analyze_sentiment, df_clientes['Detalhes_Reclamações']))
 
 # Salvar os resultados em um novo arquivo Excel
-df_clientes.to_excel('sentiment_analysis_results.xlsx', index=False)
+df_clientes.to_csv('clientes.csv', index=False)
 
-print("Análise de sentimento concluída e salva em 'sentiment_analysis_results.xlsx'.")
+print("Análise de sentimento concluída e salva em 'clientes.csv'.")
