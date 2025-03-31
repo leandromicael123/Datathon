@@ -1,0 +1,11 @@
+Column1;Column2;Column4;Column5;Column6;Column9;Column10;Column11;Column12;Column13;Column15;Column16
+;Categoria;Consumo_Agua_Litros;Consumo_Energia_kWh;Custo_Produção;Emissao_Gases_CO2e_kg;Fabricante;País_Fabricante;Preço_Unitário;Produto;Quantidade_Vendida;Região_Fabricante
+count;10674;10674.0;10674.0;10674.0;10674.0;10674;10674;10674.0;10674;10674;10674
+unique;5;;;;;5;5;;66;;16
+mean;;13.3;69.4;118.9;5.03;;;243.0;;5.5;
+min;;0.1;0.1;0.5;0.1;;;1.0;;1.0;
+25%;;2.15;4.8;12.08;2.51;;;26.3;;3.0;
+50%;;5.13;12.5;42.18;5.02;;;92.4;;5.0;
+75%;;13.24;32.4875;103.3;7.56;;;208.2;;8.0;
+max;;99.7;798.42;896.54;10.0;;;1992.7;;10.0;
+std;;19.8;145.5;190.4;2.88;;;385.4;;2.8;
